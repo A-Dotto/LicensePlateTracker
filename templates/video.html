@@ -1,0 +1,399 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row video-page">
+    <div class="col-12">
+        <h3 class="mb-4">Video License Plate Detection</h3>
+        
+        <!-- Model Info Card -->
+        <div class="model-info mb-4">
+            <h5><i class="fas fa-brain me-2"></i>Advanced ANPR Model</h5>
+            <p>This detection uses an advanced multi-stage CPU-optimized model with enhanced image processing</p>
+            <div class="model-features">
+                <div class="model-feature">
+                    <i class="fas fa-check-circle"></i> Multi-angle license plate detection
+                </div>
+                <div class="model-feature">
+                    <i class="fas fa-check-circle"></i> Perspective correction for improved accuracy
+                </div>
+                <div class="model-feature">
+                    <i class="fas fa-check-circle"></i> Character segmentation with pattern recognition
+                </div>
+                <div class="model-feature">
+                    <i class="fas fa-check-circle"></i> Multiple preprocessing techniques for challenging images
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="nav nav-tabs mb-3" id="nav-tab" role="tablist">
+                    <button class="nav-link active" id="nav-webcam-tab" data-bs-toggle="tab" data-bs-target="#nav-webcam" type="button" role="tab" aria-controls="nav-webcam" aria-selected="true">Webcam</button>
+                    <button class="nav-link" id="nav-upload-tab" data-bs-toggle="tab" data-bs-target="#nav-upload" type="button" role="tab" aria-controls="nav-upload" aria-selected="false">Upload Video</button>
+                </div>
+                
+                <div class="tab-content" id="nav-tabContent">
+                    <!-- Webcam Tab -->
+                    <div class="tab-pane fade show active" id="nav-webcam" role="tabpanel" aria-labelledby="nav-webcam-tab">
+                        <div class="video-container">
+                            <video id="webcam" autoplay muted class="w-100 border rounded"></video>
+                        </div>
+                        
+                        <div class="control-buttons">
+                            <button id="start-camera" class="btn btn-primary">
+                                <i class="fas fa-video me-2"></i>Start Camera
+                            </button>
+                            <button id="stop-camera" class="btn btn-secondary" disabled>
+                                <i class="fas fa-video-slash me-2"></i>Stop Camera
+                            </button>
+                            <button id="capture-image" class="btn btn-info" disabled>
+                                <i class="fas fa-camera me-2"></i>Capture Frame
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Upload Tab -->
+                    <div class="tab-pane fade" id="nav-upload" role="tabpanel" aria-labelledby="nav-upload-tab">
+                        <div class="mb-3">
+                            <label for="video-upload" class="custom-file-upload">
+                                <i class="fas fa-file-upload me-2"></i>Choose Video File
+                            </label>
+                            <input type="file" id="video-upload" accept="video/*" style="display:none;">
+                            <span id="selected-file-name">No file selected</span>
+                        </div>
+                        
+                        <div class="video-container">
+                            <video id="uploaded-video" controls class="w-100 border rounded"></video>
+                        </div>
+                        
+                        <div class="control-buttons">
+                            <button id="extract-frame" class="btn btn-info" disabled>
+                                <i class="fas fa-image me-2"></i>Extract Current Frame
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Capture Result</h5>
+            </div>
+            <div class="card-body">
+                <!-- Processing status indicator -->
+                <div id="processing-status" class="d-none mb-3"></div>
+                
+                <div class="canvas-container">
+                    <canvas id="video-canvas" class="w-100"></canvas>
+                </div>
+                
+                <div class="result-container">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h5>Detected License Plate: <span id="license-plate-text">-</span></h5>
+                            <p>Confidence: <span id="confidence-score">-</span></p>
+                            <p class="text-muted small" id="processing-time"></p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <button id="detect-button" class="btn btn-primary" disabled>
+                                <i class="fas fa-search me-2"></i>Detect License Plate
+                            </button>
+                            <!-- Removed database save button -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const webcam = document.getElementById('webcam');
+        const uploadedVideo = document.getElementById('uploaded-video');
+        const canvas = document.getElementById('video-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        const startCameraBtn = document.getElementById('start-camera');
+        const stopCameraBtn = document.getElementById('stop-camera');
+        const captureImageBtn = document.getElementById('capture-image');
+        const videoUploadInput = document.getElementById('video-upload');
+        const selectedFileName = document.getElementById('selected-file-name');
+        const extractFrameBtn = document.getElementById('extract-frame');
+        const detectButton = document.getElementById('detect-button');
+        
+        const licensePlateText = document.getElementById('license-plate-text');
+        const confidenceScore = document.getElementById('confidence-score');
+        const processingTime = document.getElementById('processing-time');
+        const processingStatus = document.getElementById('processing-status');
+        
+        let stream = null;
+        let imageCapture = null;
+        
+        // Set canvas dimensions to match video container
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetWidth * 9/16; // 16:9 aspect ratio
+        
+        // Draw placeholder text on canvas
+        ctx.fillStyle = '#e9ecef';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.font = '16px Arial';
+        ctx.fillStyle = '#6c757d';
+        ctx.textAlign = 'center';
+        ctx.fillText('Capture an image to detect license plates', canvas.width/2, canvas.height/2);
+        
+        // Start camera
+        startCameraBtn.addEventListener('click', async function() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    } 
+                });
+                
+                webcam.srcObject = stream;
+                const track = stream.getVideoTracks()[0];
+                imageCapture = new ImageCapture(track);
+                
+                startCameraBtn.disabled = true;
+                stopCameraBtn.disabled = false;
+                captureImageBtn.disabled = false;
+            } catch (err) {
+                console.error('Error accessing the camera: ', err);
+                alert('Could not access the camera. Please ensure you have a webcam connected and have granted permission.');
+            }
+        });
+        
+        // Stop camera
+        stopCameraBtn.addEventListener('click', function() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                webcam.srcObject = null;
+                stream = null;
+                imageCapture = null;
+                
+                startCameraBtn.disabled = false;
+                stopCameraBtn.disabled = true;
+                captureImageBtn.disabled = true;
+            }
+        });
+        
+        // Capture image from webcam
+        captureImageBtn.addEventListener('click', async function() {
+            if (imageCapture) {
+                try {
+                    const blob = await imageCapture.takePhoto();
+                    const img = new Image();
+                    img.src = URL.createObjectURL(blob);
+                    
+                    img.onload = function() {
+                        // Clear canvas
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        
+                        // Draw image on canvas
+                        const aspectRatio = img.width / img.height;
+                        let drawWidth = canvas.width;
+                        let drawHeight = canvas.width / aspectRatio;
+                        
+                        if (drawHeight > canvas.height) {
+                            drawHeight = canvas.height;
+                            drawWidth = canvas.height * aspectRatio;
+                        }
+                        
+                        const x = (canvas.width - drawWidth) / 2;
+                        const y = (canvas.height - drawHeight) / 2;
+                        
+                        ctx.drawImage(img, x, y, drawWidth, drawHeight);
+                        
+                        // Enable detect button
+                        detectButton.disabled = false;
+                    };
+                } catch (err) {
+                    console.error('Error capturing image: ', err);
+                    alert('Failed to capture image. Please try again.');
+                }
+            }
+        });
+        
+        // Handle video upload
+        videoUploadInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                selectedFileName.textContent = file.name;
+                
+                const fileURL = URL.createObjectURL(file);
+                uploadedVideo.src = fileURL;
+                
+                extractFrameBtn.disabled = false;
+            }
+        });
+        
+        // Extract frame from uploaded video
+        extractFrameBtn.addEventListener('click', function() {
+            if (uploadedVideo.readyState >= 2) {
+                // Clear canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw video frame on canvas
+                const aspectRatio = uploadedVideo.videoWidth / uploadedVideo.videoHeight;
+                let drawWidth = canvas.width;
+                let drawHeight = canvas.width / aspectRatio;
+                
+                if (drawHeight > canvas.height) {
+                    drawHeight = canvas.height;
+                    drawWidth = canvas.height * aspectRatio;
+                }
+                
+                const x = (canvas.width - drawWidth) / 2;
+                const y = (canvas.height - drawHeight) / 2;
+                
+                ctx.drawImage(uploadedVideo, x, y, drawWidth, drawHeight);
+                
+                // Enable detect button
+                detectButton.disabled = false;
+            } else {
+                alert('Please wait for the video to load or choose a different file.');
+            }
+        });
+        
+        // Detect license plate
+        detectButton.addEventListener('click', function() {
+            // Show processing status
+            processingStatus.classList.remove('d-none');
+            processingStatus.innerHTML = `
+                <div class="alert alert-info d-flex align-items-center" role="alert">
+                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                    <div>
+                        Advanced ANPR model is analyzing the image...
+                    </div>
+                </div>
+            `;
+            
+            // Reset previous results
+            licensePlateText.textContent = '-';
+            confidenceScore.textContent = '-';
+            processingTime.textContent = '';
+            
+            // Disable detect button while processing
+            detectButton.disabled = true;
+            
+            // Get the image from the canvas
+            const imageDataURL = canvas.toDataURL('image/jpeg');
+            
+            // Convert data URL to Blob
+            const byteString = atob(imageDataURL.split(',')[1]);
+            const mimeString = imageDataURL.split(',')[0].split(':')[1].split(';')[0];
+            const ab = new ArrayBuffer(byteString.length);
+            const ia = new Uint8Array(ab);
+            for (let i = 0; i < byteString.length; i++) {
+                ia[i] = byteString.charCodeAt(i);
+            }
+            const blob = new Blob([ab], { type: mimeString });
+            
+            // Create FormData and append the image
+            const formData = new FormData();
+            formData.append('image', blob, 'canvas_image.jpg');
+            
+            // Record start time for processing measurement
+            const startTime = performance.now();
+            
+            // Send the image to the server for processing
+            fetch('/api/detect-license-plate', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Calculate processing time
+                const endTime = performance.now();
+                const processingTimeMs = endTime - startTime;
+                
+                if (data.success) {
+                    // Update license plate info
+                    licensePlateText.textContent = data.license_plate;
+                    confidenceScore.textContent = `${(data.confidence * 100).toFixed(1)}%`;
+                    processingTime.textContent = `Processing time: ${processingTimeMs.toFixed(0)}ms`;
+                    
+                    // Show success message
+                    processingStatus.innerHTML = `
+                        <div class="alert alert-success d-flex align-items-center" role="alert">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <div>
+                                License plate detected successfully!
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Draw bounding box if available
+                    if (data.bbox) {
+                        const {x, y, width, height, label} = data.bbox;
+                        
+                        // Draw a copy of the image
+                        const originalImage = new Image();
+                        originalImage.src = imageDataURL;
+                        
+                        originalImage.onload = function() {
+                            // Clear canvas
+                            ctx.clearRect(0, 0, canvas.width, canvas.height);
+                            
+                            // Draw original image
+                            ctx.drawImage(originalImage, 0, 0, canvas.width, canvas.height);
+                            
+                            // Calculate scale factor (canvas vs original image)
+                            const scaleX = canvas.width / originalImage.width;
+                            const scaleY = canvas.height / originalImage.height;
+                            
+                            // Draw bounding box with scaled coordinates
+                            ctx.strokeStyle = '#00FF00';
+                            ctx.lineWidth = 3;
+                            ctx.strokeRect(x * scaleX, y * scaleY, width * scaleX, height * scaleY);
+                            
+                            // Draw label
+                            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                            ctx.fillRect(x * scaleX, (y * scaleY) - 25, (width * scaleX), 25);
+                            ctx.fillStyle = '#FFFFFF';
+                            ctx.font = 'bold 16px Arial';
+                            ctx.textAlign = 'left';
+                            ctx.fillText(label, (x * scaleX) + 5, (y * scaleY) - 7);
+                        };
+                    }
+                    
+                    // Enable detect button again
+                    detectButton.disabled = false;
+                } else {
+                    // Show error message
+                    processingStatus.innerHTML = `
+                        <div class="alert alert-danger d-flex align-items-center" role="alert">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            <div>
+                                Failed to detect license plate: ${data.message}
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Enable detect button for retry
+                    detectButton.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                
+                // Show error message
+                processingStatus.innerHTML = `
+                    <div class="alert alert-danger d-flex align-items-center" role="alert">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        <div>
+                            An error occurred while processing the image. Please try again.
+                        </div>
+                    </div>
+                `;
+                
+                // Enable detect button for retry
+                detectButton.disabled = false;
+            });
+        });
+    });
+</script>
+{% endblock %}

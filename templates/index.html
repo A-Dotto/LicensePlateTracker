@@ -1,0 +1,192 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<!-- Main container with upload form and results display -->
+<div class="container py-4">
+    <h1 class="text-center mb-4">Indian License Plate Detector</h1>
+    
+    <!-- Upload Form -->
+    <div class="row mb-4">
+        <div class="col-md-6 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Upload Image</h5>
+                </div>
+                <div class="card-body">
+                    <form id="upload-form" action="{{ url_for('upload') }}" method="post" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="file" class="form-label">Select a car image:</label>
+                            <input class="form-control" type="file" id="file" name="file" accept="image/*" required>
+                        </div>
+                        <div id="preview-container" class="d-none mb-3 text-center">
+                            <img id="image-preview" src="" alt="Preview" class="img-fluid rounded">
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary" id="upload-button">
+                                <span id="loading-indicator" class="spinner-border spinner-border-sm d-none me-2" role="status"></span>
+                                <i class="fas fa-cloud-upload-alt me-2"></i> Upload & Detect
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Results Section (only shown after processing) -->
+    {% if show_results %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">Detection Results</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Original Image -->
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h6 class="mb-0">Original Image</h6>
+                                </div>
+                                <div class="card-body text-center">
+                                    <img src="data:image/jpeg;base64,{{ last_processed.original_image }}" class="img-fluid rounded" alt="Original Image">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Annotated Image -->
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h6 class="mb-0">Detected License Plate</h6>
+                                </div>
+                                <div class="card-body text-center">
+                                    <img src="data:image/jpeg;base64,{{ last_processed.annotated_image }}" class="img-fluid rounded" alt="Annotated Image">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Result Details -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">Detection Details</h6>
+                                </div>
+                                <div class="card-body">
+                                    <table class="table table-striped">
+                                        <tbody>
+                                            <tr>
+                                                <th>License Plate:</th>
+                                                <td>
+                                                    {% if last_processed.license_plate and last_processed.license_plate != "No license plate detected" %}
+                                                        <div class="license-plate">{{ last_processed.license_plate }}</div>
+                                                    {% else %}
+                                                        <span class="badge bg-danger">No license plate detected</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>Confidence:</th>
+                                                <td>
+                                                    {% if last_processed.confidence > 0 %}
+                                                        <div class="progress">
+                                                            <div class="progress-bar bg-success" role="progressbar" 
+                                                                style="width: {{ last_processed.confidence * 100 }}%;" 
+                                                                aria-valuenow="{{ last_processed.confidence * 100 }}" 
+                                                                aria-valuemin="0" 
+                                                                aria-valuemax="100">
+                                                                {{ "%.1f"|format(last_processed.confidence * 100) }}%
+                                                            </div>
+                                                        </div>
+                                                    {% else %}
+                                                        <span class="badge bg-secondary">N/A</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>Processing Time:</th>
+                                                <td>{{ "%.3f"|format(last_processed.detection_time) }} seconds</td>
+                                            </tr>
+                                            <tr>
+                                                <th>File:</th>
+                                                <td>{{ last_processed.filename }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- Initial state when no images have been processed -->
+    <div class="row mt-5">
+        <div class="col-md-8 mx-auto text-center">
+            <div class="empty-state">
+                <i class="fas fa-car-side empty-state-icon fa-5x mb-3 text-muted"></i>
+                <h4>No images processed yet</h4>
+                <p class="text-muted">Upload a car image above to detect license plates</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Video Processing Link -->
+    <div class="row mt-4">
+        <div class="col-md-6 mx-auto text-center">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-video me-2"></i> Try Video Mode</h5>
+                    <p class="card-text">Want to detect license plates from video or webcam?</p>
+                    <a href="{{ url_for('video') }}" class="btn btn-outline-primary">Go to Video Mode</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Image preview functionality
+        const fileInput = document.getElementById('file');
+        const previewContainer = document.getElementById('preview-container');
+        const imagePreview = document.getElementById('image-preview');
+        
+        if (fileInput) {
+            fileInput.addEventListener('change', function() {
+                if (this.files && this.files[0]) {
+                    const reader = new FileReader();
+                    
+                    reader.onload = function(e) {
+                        imagePreview.src = e.target.result;
+                        previewContainer.classList.remove('d-none');
+                    }
+                    
+                    reader.readAsDataURL(this.files[0]);
+                } else {
+                    previewContainer.classList.add('d-none');
+                }
+            });
+        }
+        
+        // Form submission with loading indicator
+        const uploadForm = document.getElementById('upload-form');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const uploadButton = document.getElementById('upload-button');
+        
+        if (uploadForm) {
+            uploadForm.addEventListener('submit', function() {
+                loadingIndicator.classList.remove('d-none');
+                uploadButton.disabled = true;
+                uploadButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span> Processing...';
+            });
+        }
+    });
+</script>
+{% endblock %}

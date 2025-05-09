@@ -1,0 +1,301 @@
+/* Card for car images */
+.car-card {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+    overflow: hidden;
+}
+
+.car-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.card-img-container {
+    position: relative;
+    overflow: hidden;
+}
+
+.card-img-top {
+    height: 200px;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.car-card:hover .card-img-top {
+    transform: scale(1.05);
+}
+
+.confidence-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 0.8rem;
+}
+
+.edited-badge {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    font-size: 0.8rem;
+}
+
+/* License plate styling */
+.license-plate {
+    background-color: #f8f8f8;
+    color: #333;
+    padding: 8px 15px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    font-size: 1.2rem;
+    display: inline-block;
+}
+
+/* Upload card styling */
+.upload-card {
+    border: 2px dashed #6c757d;
+    background-color: #343a40;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: #ffffff;
+}
+
+.upload-card:hover {
+    background-color: #495057;
+    border-color: #adb5bd;
+    transform: translateY(-5px);
+}
+
+.upload-icon {
+    font-size: 3rem;
+    margin-bottom: 15px;
+}
+
+/* Empty state */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #6c757d;
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    color: #dee2e6;
+}
+
+/* Search styling */
+.search-container {
+    position: relative;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.clear-search {
+    background: none;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    padding: 0;
+}
+
+.clear-search:hover {
+    color: #212529;
+}
+
+/* Image preview in upload modal */
+#image-preview {
+    max-width: 100%;
+    max-height: 200px;
+}
+
+/* Modal adjustments */
+.modal-dialog {
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* Pagination styling */
+.pagination .page-link {
+    color: #007bff;
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+/* Video capture styling */
+.video-container {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    margin-bottom: 1rem;
+}
+
+.canvas-container {
+    position: relative;
+    width: 100%;
+    margin-bottom: 1rem;
+}
+
+#video-canvas {
+    width: 100%;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.control-buttons {
+    margin-top: 1rem;
+}
+
+.result-container {
+    margin-top: 1.5rem;
+}
+
+.detection-box {
+    position: absolute;
+    border: 3px solid #28a745;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+    z-index: 100;
+}
+
+.detection-label {
+    position: absolute;
+    background-color: #28a745;
+    color: white;
+    font-size: 0.8rem;
+    padding: 2px 5px;
+    border-radius: 3px;
+    z-index: 101;
+}
+
+/* File upload button styling for webcam page */
+.custom-file-upload {
+    display: inline-block;
+    padding: 6px 12px;
+    cursor: pointer;
+    background-color: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-right: 10px;
+}
+
+/* Advanced ANPR Processing overlay */
+.processing-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    backdrop-filter: blur(5px);
+}
+
+.processing-content {
+    background-color: rgba(33, 37, 41, 0.8);
+    padding: 2rem;
+    border-radius: 10px;
+    max-width: 90%;
+    width: 400px;
+    text-align: center;
+    color: white;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+    animation: fade-in 0.5s ease;
+}
+
+.processing-steps {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1rem;
+    text-align: center;
+    color: #adb5bd;
+    font-size: 0.8rem;
+}
+
+.step {
+    position: relative;
+    padding: 0.25rem 0.5rem;
+    border-radius: 3px;
+    transition: all 0.3s ease;
+}
+
+.step.active {
+    background-color: #007bff;
+    color: white;
+    animation: pulse 1s infinite;
+}
+
+.step.completed {
+    background-color: #28a745;
+    color: white;
+}
+
+.progress {
+    height: 0.5rem;
+    background-color: #343a40;
+}
+
+.progress-bar {
+    transition: width 0.5s ease;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+@keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Processing status indicator for video mode */
+#processing-status {
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+/* Model info display */
+.model-info {
+    background-color: rgba(33, 37, 41, 0.05);
+    border-left: 4px solid #007bff;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 0 4px 4px 0;
+}
+
+.model-info h5 {
+    margin-bottom: 0.5rem;
+    color: #007bff;
+}
+
+.model-info p {
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    color: #495057;
+}
+
+.model-feature {
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+}
+
+.model-feature i {
+    color: #28a745;
+    margin-right: 0.5rem;
+}
